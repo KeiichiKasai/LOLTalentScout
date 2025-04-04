@@ -1,4 +1,4 @@
-package score
+package scores
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ type (
 	UserScore struct {
 		SummonerID   int64    `json:"summonerID"`
 		SummonerName string   `json:"summonerName"`
-		Score        float64  `json:"score"`
+		Score        float64  `json:"scores"`
 		CurrKDA      [][3]int `json:"currKDA"`
 	}
 	IncScoreReason struct {

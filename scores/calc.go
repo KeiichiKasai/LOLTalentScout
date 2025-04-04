@@ -1,8 +1,7 @@
-package score
+package scores
 
 import (
 	"errors"
-	"main.go/lcu"
 	"main.go/lcu/models"
 	"main.go/utils"
 	"sync"
@@ -17,27 +16,22 @@ type (
 		Limit     float64      `json:"limit" required:"true"`     // >30%
 		ScoreConf [][2]float64 `json:"scoreConf" required:"true"` // [ [最低人头限制,加分数] ]
 	}
-	HorseScoreConf struct {
-		Score float64 `json:"score,omitempty" required:"true"`
-		Name  string  `json:"name" required:"true"`
-	}
 	CalcScoreConf struct {
-		Enabled            bool              `json:"enabled" default:"false"`
-		FirstBlood         [2]float64        `json:"firstBlood" required:"true"`         // [击杀+,助攻+]
-		PentaKills         [1]float64        `json:"pentaKills" required:"true"`         // 五杀
-		QuadraKills        [1]float64        `json:"quadraKills" required:"true"`        // 四杀
-		TripleKills        [1]float64        `json:"tripleKills" required:"true"`        // 三杀
-		JoinTeamRateRank   [4]float64        `json:"joinTeamRate" required:"true"`       // 参团率排名
-		GoldEarnedRank     [4]float64        `json:"goldEarned" required:"true"`         // 打钱排名
-		HurtRank           [2]float64        `json:"hurtRank" required:"true"`           // 伤害排名
-		Money2hurtRateRank [2]float64        `json:"money2HurtRateRank" required:"true"` // 金钱转换伤害比排名
-		VisionScoreRank    [2]float64        `json:"visionScoreRank" required:"true"`    // 视野得分排名
-		MinionsKilled      [][2]float64      `json:"minionsKilled" required:"true"`      // 补兵 [ [补兵数,加分数] ]
-		KillRate           []RateItemConf    `json:"killRate" required:"true"`           // 人头占比
-		HurtRate           []RateItemConf    `json:"hurtRate" required:"true"`           // 伤害占比
-		AssistRate         []RateItemConf    `json:"assistRate" required:"true"`         // 助攻占比
-		AdjustKDA          [2]float64        `json:"adjustKDA" required:"true"`          // kda
-		Horse              [6]HorseScoreConf `json:"horse" required:"true"`
+		Enabled            bool           `json:"enabled" default:"false"`
+		FirstBlood         [2]float64     `json:"firstBlood" required:"true"`         // [击杀+,助攻+]
+		PentaKills         [1]float64     `json:"pentaKills" required:"true"`         // 五杀
+		QuadraKills        [1]float64     `json:"quadraKills" required:"true"`        // 四杀
+		TripleKills        [1]float64     `json:"tripleKills" required:"true"`        // 三杀
+		JoinTeamRateRank   [4]float64     `json:"joinTeamRate" required:"true"`       // 参团率排名
+		GoldEarnedRank     [4]float64     `json:"goldEarned" required:"true"`         // 打钱排名
+		HurtRank           [2]float64     `json:"hurtRank" required:"true"`           // 伤害排名
+		Money2hurtRateRank [2]float64     `json:"money2HurtRateRank" required:"true"` // 金钱转换伤害比排名
+		VisionScoreRank    [2]float64     `json:"visionScoreRank" required:"true"`    // 视野得分排名
+		MinionsKilled      [][2]float64   `json:"minionsKilled" required:"true"`      // 补兵 [ [补兵数,加分数] ]
+		KillRate           []RateItemConf `json:"killRate" required:"true"`           // 人头占比
+		HurtRate           []RateItemConf `json:"hurtRate" required:"true"`           // 伤害占比
+		AssistRate         []RateItemConf `json:"assistRate" required:"true"`         // 助攻占比
+		AdjustKDA          [2]float64     `json:"adjustKDA" required:"true"`          // kda
 	}
 )
 
@@ -98,19 +92,11 @@ var CalcScore = CalcScoreConf{
 		}},
 	},
 	AdjustKDA: [2]float64{2, 5},
-	Horse: [6]HorseScoreConf{
-		{Score: 180, Name: "通天代"},
-		{Score: 150, Name: "小代"},
-		{Score: 125, Name: "上等马"},
-		{Score: 105, Name: "中等马"},
-		{Score: 95, Name: "下等马"},
-		{Score: 0.0001, Name: "牛马"},
-	},
 }
 
 var confMu = sync.Mutex{}
 
-func CalcUserGameScore(summonerID int64, gameSummary lcu.GameSummary) (*ScoreWithReason, error) {
+func CalcUserGameScore(summonerID int64, gameSummary models.GameSummary) (*ScoreWithReason, error) {
 	//算分需要的信息ScoreConf
 	confMu.Lock()
 	calcScoreConf := CalcScore
@@ -128,7 +114,7 @@ func CalcUserGameScore(summonerID int64, gameSummary lcu.GameSummary) (*ScoreWit
 	}
 	var userTeamID *models.TeamID
 	memberParticipantIDList := make([]int, 0, 4)
-	idMapParticipant := make(map[int]lcu.Participant, len(gameSummary.Participants))
+	idMapParticipant := make(map[int]models.Participant, len(gameSummary.Participants))
 	for _, item := range gameSummary.Participants {
 		if item.ParticipantId == userParticipantId {
 			userTeamID = &item.TeamId
@@ -354,7 +340,7 @@ func CalcUserGameScore(summonerID int64, gameSummary lcu.GameSummary) (*ScoreWit
 	return gameScore, nil
 }
 
-func listMemberVisionScore(gameSummary *lcu.GameSummary, memberParticipantIDList []int) []int {
+func listMemberVisionScore(gameSummary *models.GameSummary, memberParticipantIDList []int) []int {
 	res := make([]int, 0, 4)
 	for _, participant := range gameSummary.Participants {
 		if !utils.InArrayInt(participant.ParticipantId, memberParticipantIDList) {
@@ -365,7 +351,7 @@ func listMemberVisionScore(gameSummary *lcu.GameSummary, memberParticipantIDList
 	return res
 }
 
-func listMemberMoney2hurtRate(gameSummary *lcu.GameSummary, memberParticipantIDList []int) []float64 {
+func listMemberMoney2hurtRate(gameSummary *models.GameSummary, memberParticipantIDList []int) []float64 {
 	res := make([]float64, 0, 4)
 	for _, participant := range gameSummary.Participants {
 		if !utils.InArrayInt(participant.ParticipantId, memberParticipantIDList) {
@@ -377,7 +363,7 @@ func listMemberMoney2hurtRate(gameSummary *lcu.GameSummary, memberParticipantIDL
 	return res
 }
 
-func listMemberMoney(gameSummary *lcu.GameSummary, memberParticipantIDList []int) []int {
+func listMemberMoney(gameSummary *models.GameSummary, memberParticipantIDList []int) []int {
 	res := make([]int, 0, 4)
 	for _, participant := range gameSummary.Participants {
 		if !utils.InArrayInt(participant.ParticipantId, memberParticipantIDList) {
@@ -388,7 +374,7 @@ func listMemberMoney(gameSummary *lcu.GameSummary, memberParticipantIDList []int
 	return res
 }
 
-func listMemberJoinTeamKillRates(gameSummary *lcu.GameSummary, totalKill int, memberParticipantIDList []int) []float64 {
+func listMemberJoinTeamKillRates(gameSummary *models.GameSummary, totalKill int, memberParticipantIDList []int) []float64 {
 	res := make([]float64, 0, 4)
 	for _, participant := range gameSummary.Participants {
 		if !utils.InArrayInt(participant.ParticipantId, memberParticipantIDList) {
@@ -400,7 +386,7 @@ func listMemberJoinTeamKillRates(gameSummary *lcu.GameSummary, totalKill int, me
 	return res
 }
 
-func listMemberHurt(gameSummary *lcu.GameSummary, memberParticipantIDList []int) []int {
+func listMemberHurt(gameSummary *models.GameSummary, memberParticipantIDList []int) []int {
 	res := make([]int, 0, 4)
 	for _, participant := range gameSummary.Participants {
 		if !utils.InArrayInt(participant.ParticipantId, memberParticipantIDList) {
@@ -409,54 +395,6 @@ func listMemberHurt(gameSummary *lcu.GameSummary, memberParticipantIDList []int)
 		res = append(res, participant.Stats.TotalDamageDealtToChampions)
 	}
 	return res
-}
-func getAllUsersFromSession(selfID int64, session *lcu.GameFlowSession) (selfTeamUsers []int64,
-	enemyTeamUsers []int64) {
-	selfTeamUsers = make([]int64, 0, 5)
-	enemyTeamUsers = make([]int64, 0, 5)
-	selfTeamID := models.TeamIDNone
-	for _, teamUser := range session.GameData.TeamOne {
-		summonerID := int64(teamUser.SummonerId)
-		if selfID == summonerID {
-			selfTeamID = models.TeamIDBlue
-			break
-		}
-	}
-	if selfTeamID == models.TeamIDNone {
-		for _, teamUser := range session.GameData.TeamTwo {
-			summonerID := int64(teamUser.SummonerId)
-			if selfID == summonerID {
-				selfTeamID = models.TeamIDRed
-				break
-			}
-		}
-	}
-	if selfTeamID == models.TeamIDNone {
-		return
-	}
-	for _, user := range session.GameData.TeamOne {
-		userID := int64(user.SummonerId)
-		if userID <= 0 {
-			return
-		}
-		if models.TeamIDBlue == selfTeamID {
-			selfTeamUsers = append(selfTeamUsers, userID)
-		} else {
-			enemyTeamUsers = append(enemyTeamUsers, userID)
-		}
-	}
-	for _, user := range session.GameData.TeamTwo {
-		userID := int64(user.SummonerId)
-		if userID <= 0 {
-			return
-		}
-		if models.TeamIDRed == selfTeamID {
-			selfTeamUsers = append(selfTeamUsers, userID)
-		} else {
-			enemyTeamUsers = append(enemyTeamUsers, userID)
-		}
-	}
-	return
 }
 
 func Judge(score float64) string {
@@ -474,5 +412,5 @@ func Judge(score float64) string {
 	case score >= 180:
 		return "通天代"
 	}
-	return "唐"
+	return "???"
 }
