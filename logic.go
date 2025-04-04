@@ -88,7 +88,7 @@ func listGameHistory(puuid string) ([]models.GameInfo, error) {
 		return nil, err
 	}
 	for _, gameItem := range resp.Games.Games {
-		
+
 		if gameItem.QueueId != models.NormalQueueID &&
 			gameItem.QueueId != models.RankSoleQueueID &&
 			gameItem.QueueId != models.ARAMQueueID &&
@@ -290,6 +290,15 @@ func GetAllUsersFromSession(selfID int64, session *models.GameFlowSession) (self
 		} else {
 			enemyTeamUsers = append(enemyTeamUsers, userID)
 		}
+	}
+	return
+}
+
+// SendMessage 每隔两秒发送马匹消息
+func SendMessage(msgList []string, sessionId string) {
+	for _, msg := range msgList {
+		time.Sleep(2 * time.Second)
+		_ = lcu.SendConversationMsg(msg, sessionId)
 	}
 	return
 }

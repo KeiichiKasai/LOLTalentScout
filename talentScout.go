@@ -54,11 +54,12 @@ func (ts *TalentScout) updateGameState(state GameState) {
 // CalcTeamScore 计算队伍成员得分
 func (ts *TalentScout) CalcTeamScore() {
 	var summonerIDList []int64
+	var sessionId string
 	for i := 0; i < 3; i++ {
 		//重复3次是为了防止有老年机半天进不来聊天室
 		time.Sleep(time.Second)
 		// 获取队伍所有用户信息
-		_, summonerIDList, _ = getTeamUsers()
+		sessionId, summonerIDList, _ = getTeamUsers()
 		if len(summonerIDList) != 5 {
 			continue
 		}
@@ -97,6 +98,7 @@ func (ts *TalentScout) CalcTeamScore() {
 		return cmp.Compare(b.Score, a.Score)
 	})
 
+	var MsgList []string
 	allMsg := ""
 	// 发送到选人界面
 	for _, scoreInfo := range summonerScores {
@@ -113,11 +115,13 @@ func (ts *TalentScout) CalcTeamScore() {
 		if len(currKDAMsg) > 0 {
 			currKDAMsg = currKDAMsg[:len(currKDAMsg)-1]
 		}
-		msg := fmt.Sprintf("%s(%d): %s %s", horse, int(scoreInfo.Score), scoreInfo.SummonerName,
-			currKDAMsg)
+		msg := fmt.Sprintf("%s(%d): %s %s", horse, int(scoreInfo.Score), scoreInfo.SummonerName, currKDAMsg)
+		MsgList = append(MsgList, msg)
 		allMsg += msg + "\n"
 	}
 	fmt.Println(allMsg)
+	SendMessage(MsgList, sessionId)
+
 }
 
 // CalcEnemyTeamScore 计算敌方分数
