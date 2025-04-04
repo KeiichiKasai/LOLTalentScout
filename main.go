@@ -15,6 +15,7 @@ import (
 	"golang.org/x/sys/windows"
 	"main.go/lcu"
 	"main.go/lcu/models"
+	"main.go/score"
 	"net"
 	"net/http"
 	"net/url"
@@ -249,10 +250,10 @@ func listGameHistory(puuid string) ([]lcu.GameInfo, error) {
 }
 
 // GetUserScore 从个人信息得到用户最近评分
-func GetUserScore(summoner *lcu.Summoner) (*lcu.UserScore, error) {
+func GetUserScore(summoner *lcu.Summoner) (*score.UserScore, error) {
 
 	summonerID := summoner.SummonerId
-	userScoreInfo := &lcu.UserScore{
+	userScoreInfo := &score.UserScore{
 		SummonerID: summonerID,
 		Score:      defaultScore,
 	}
@@ -313,7 +314,7 @@ func GetUserScore(summoner *lcu.Summoner) (*lcu.UserScore, error) {
 	otherGameScoreList := make([]float64, 0, 10) //其他时间分数列表
 	for _, gameSummary := range gameSummaryList {
 		//得到用户该局分数
-		gameScore, err := calcUserGameScore(summonerID, gameSummary)
+		gameScore, err := score.CalcUserGameScore(summonerID, gameSummary)
 		if err != nil {
 			fmt.Println("游戏战绩计算用户得分失败", zap.Error(err), zap.Int64("summonerID", summonerID),
 				zap.Int64("gameID", gameSummary.GameId))
@@ -403,7 +404,7 @@ func (ts *TalentScout) CalcTeamScore() {
 	fmt.Println("队伍人员列表:", summonerIDList)
 	// 查询所有用户的信息并计算得分
 	g := errgroup.Group{}
-	summonerScores := make([]*lcu.UserScore, 0, 5)
+	summonerScores := make([]*score.UserScore, 0, 5)
 	mu := sync.Mutex{}
 	summonerIDMapInfo, err := listSummoner(summonerIDList)
 	if err != nil {
@@ -427,7 +428,7 @@ func (ts *TalentScout) CalcTeamScore() {
 	}
 	//Wait等待errgroup中的所有协程完成，如果有一个失败则取消其他协程
 	_ = g.Wait()
-	slices.SortFunc(summonerScores, func(a, b *lcu.UserScore) int {
+	slices.SortFunc(summonerScores, func(a, b *score.UserScore) int {
 		return cmp.Compare(b.Score, a.Score)
 	})
 
@@ -435,7 +436,7 @@ func (ts *TalentScout) CalcTeamScore() {
 	// 发送到选人界面
 	for _, scoreInfo := range summonerScores {
 		//判断是什么马
-		horse := Judge(scoreInfo.Score)
+		horse := score.Judge(scoreInfo.Score)
 		//记录最近五场KDA
 		currKDASb := strings.Builder{}
 		for i := 0; i < 5 && i < len(scoreInfo.CurrKDA); i++ {
@@ -467,7 +468,7 @@ func (ts *TalentScout) CalcEnemyTeamScore() {
 		return
 	}
 	selfID := ts.currSummoner.SummonerId
-	selfTeamUsers, enemyTeamUsers := getAllUsersFromSession(selfID, session)
+	selfTeamUsers, enemyTeamUsers := score.getAllUsersFromSession(selfID, session)
 	_ = selfTeamUsers
 	summonerIDList := enemyTeamUsers
 
@@ -477,7 +478,7 @@ func (ts *TalentScout) CalcEnemyTeamScore() {
 	}
 	// 查询所有用户的信息并计算得分
 	g := errgroup.Group{}
-	summonerScores := make([]*lcu.UserScore, 0, 5)
+	summonerScores := make([]*score.UserScore, 0, 5)
 	mu := sync.Mutex{}
 	summonerIDMapInfo, err := listSummoner(summonerIDList)
 	if err != nil {
@@ -504,13 +505,13 @@ func (ts *TalentScout) CalcEnemyTeamScore() {
 	if len(summonerScores) > 0 {
 		fmt.Println("敌方用户详情:")
 	}
-	slices.SortFunc(summonerScores, func(a, b *lcu.UserScore) int {
+	slices.SortFunc(summonerScores, func(a, b *score.UserScore) int {
 		return cmp.Compare(b.Score, a.Score)
 	})
 	// 根据所有用户的分数判断小代上等马中等马下等马
 	allMsg := ""
 	for _, score := range summonerScores {
-		horse := Judge(score.Score)
+		horse := score.Judge(score.Score)
 		currKDASb := strings.Builder{}
 		for i := 0; i < 5 && i < len(score.CurrKDA); i++ {
 			currKDASb.WriteString(fmt.Sprintf("%d/%d/%d  ", score.CurrKDA[i][0], score.CurrKDA[i][1],

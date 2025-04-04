@@ -1,4 +1,4 @@
-package lcu
+package score
 
 import (
 	"fmt"

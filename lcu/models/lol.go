@@ -73,16 +73,17 @@ const (
 	BOTNoviceQueueID GameQueueID = 840 // 人机新手
 	BOTNormalQueueID GameQueueID = 850 // 人机一般
 
-	// 地图id
+	// MapIDClassic 地图id
 	MapIDClassic MapID = 11 // 经典模式召唤师峡谷
 	MapIDARAM    MapID = 12 // 极地大乱斗
-	// 队伍id
+	// TeamIDNone 队伍id
 	TeamIDNone    TeamID    = 0     // 未知
 	TeamIDBlue    TeamID    = 100   // 蓝色方
 	TeamIDRed     TeamID    = 200   // 红色方
 	TeamIDStrNone TeamIDStr = ""    // 未知
 	TeamIDStrBlue TeamIDStr = "100" // 蓝色方
 	TeamIDStrRed  TeamIDStr = "200" // 红色方
+
 	// 大区id
 	PlatformIDDX1 = "HN1" // 艾欧尼亚
 	PlatformIDDX2 = "HN2" // 祖安
