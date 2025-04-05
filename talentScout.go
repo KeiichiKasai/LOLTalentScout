@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"github.com/avast/retry-go"
 	"github.com/gorilla/websocket"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"main.go/initialize"
 	"main.go/lcu"
 	"main.go/lcu/models"
+	"main.go/mq"
 	"main.go/scores"
 	"net/http"
 	"slices"
@@ -32,6 +34,7 @@ type TalentScout struct {
 	cancel       func()
 	mu           *sync.Mutex
 	GameState    GameState
+	MqConn       *amqp.Connection
 }
 
 func NewTalentScout() *TalentScout {
@@ -40,6 +43,7 @@ func NewTalentScout() *TalentScout {
 		ctx:    ctx,
 		cancel: cancel,
 		mu:     &sync.Mutex{},
+		MqConn: mq.InitMQ(),
 	}
 	return ts
 }
@@ -121,8 +125,7 @@ func (ts *TalentScout) CalcTeamScore() {
 		allMsg += msg + "\n"
 	}
 	fmt.Println(allMsg)
-	SendMessage(MsgList, sessionId)
-
+	ts.PushMsgToMq(MsgList, sessionId)
 }
 
 // CalcEnemyTeamScore 计算敌方分数
@@ -195,7 +198,7 @@ func (ts *TalentScout) CalcEnemyTeamScore() {
 	fmt.Println(allMsg)
 }
 
-// 根据客户端推送的信息，实时更新客户端状态
+// onGameFlowUpdate 根据客户端推送的信息，实时更新客户端状态
 func (ts *TalentScout) onGameFlowUpdate(gameFlow string) {
 	fmt.Println("切换状态:" + gameFlow)
 	switch gameFlow {
@@ -261,7 +264,7 @@ func (ts *TalentScout) InitGameFlowMonitor(port int, token string) error {
 	}
 	//如果获取到了召唤师信息则LCU客户端连接成功，把状态设置为活跃
 	ts.lcuActive = true
-	//向客户端发送了[5, "OnJsonApiEvent"]，可能是有某种协商？目前不太清楚
+	//向客户端发送[5, "OnJsonApiEvent"],请求交互信息
 	_ = c.WriteMessage(websocket.TextMessage, []byte("[5, \"OnJsonApiEvent\"]"))
 	for {
 		msgType, message, err := c.ReadMessage()
@@ -291,7 +294,18 @@ func (ts *TalentScout) InitGameFlowMonitor(port int, token string) error {
 	}
 }
 
+func (ts *TalentScout) PushMsgToMq(msgList []string, sessionId string) {
+	m := "LOL伯乐正在寻找千里马...|" + sessionId
+	msgs := []string{m}
+	for _, msg := range msgList {
+		msgs = append(msgs, msg+"|"+sessionId)
+	}
+	mq.Produce(ts.MqConn, msgs)
+}
+
 func (ts *TalentScout) Run() {
+	//开启监听
+	go mq.Listen(ts.MqConn)
 	//重连次数
 	connection := 1
 	for {
