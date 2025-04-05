@@ -106,7 +106,7 @@ func (ts *TalentScout) CalcTeamScore() {
 		horse := scores.Judge(scoreInfo.Score)
 		//记录最近五场KDA
 		currKDASb := strings.Builder{}
-		for i := 0; i < 5 && i < len(scoreInfo.CurrKDA); i++ {
+		for i := 0; i < 3 && i < len(scoreInfo.CurrKDA); i++ {
 			currKDASb.WriteString(fmt.Sprintf("%d/%d/%d  ", scoreInfo.CurrKDA[i][0], scoreInfo.CurrKDA[i][1],
 				scoreInfo.CurrKDA[i][2]))
 		}
@@ -115,7 +115,8 @@ func (ts *TalentScout) CalcTeamScore() {
 		if len(currKDAMsg) > 0 {
 			currKDAMsg = currKDAMsg[:len(currKDAMsg)-1]
 		}
-		msg := fmt.Sprintf("%s(%d): %s %s", horse, int(scoreInfo.Score), scoreInfo.SummonerName, currKDAMsg)
+		part := strings.Split(scoreInfo.SummonerName, "#")
+		msg := fmt.Sprintf("%s\t[%s]-评分: %d 最近三场:%s", part[0], horse, int(scoreInfo.Score), currKDAMsg)
 		MsgList = append(MsgList, msg)
 		allMsg += msg + "\n"
 	}
@@ -187,7 +188,8 @@ func (ts *TalentScout) CalcEnemyTeamScore() {
 				score.CurrKDA[i][2]))
 		}
 		currKDAMsg := currKDASb.String()
-		msg := fmt.Sprintf("%s(%d): %s %s", horse, int(score.Score), score.SummonerName, currKDAMsg)
+		part := strings.Split(score.SummonerName, "#")
+		msg := fmt.Sprintf("%s\t[%s]-综合评分: %d 最近三场:%s", part[0], horse, int(score.Score), currKDAMsg)
 		allMsg += msg + "\n"
 	}
 	fmt.Println(allMsg)

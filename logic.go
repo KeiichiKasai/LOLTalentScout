@@ -296,8 +296,10 @@ func GetAllUsersFromSession(selfID int64, session *models.GameFlowSession) (self
 
 // SendMessage 每隔两秒发送马匹消息
 func SendMessage(msgList []string, sessionId string) {
+	m := "LOL伯乐正在寻找千里马..."
+	_ = lcu.SendConversationMsg(m, sessionId)
 	for _, msg := range msgList {
-		time.Sleep(2 * time.Second)
+		time.Sleep(4 * time.Second)
 		_ = lcu.SendConversationMsg(msg, sessionId)
 	}
 	return
