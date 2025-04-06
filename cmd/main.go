@@ -1,10 +1,9 @@
 package main
 
-import (
-	"main.go"
-)
+import LOLTalentScout "main.go"
 
 func main() {
 	talentScout := LOLTalentScout.NewTalentScout()
 	talentScout.Run()
+
 }

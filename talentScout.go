@@ -43,7 +43,7 @@ func NewTalentScout() *TalentScout {
 		ctx:    ctx,
 		cancel: cancel,
 		mu:     &sync.Mutex{},
-		MqConn: mq.InitMQ(),
+		//MqConn: mq.InitMQ(), 启用消息队列
 	}
 	return ts
 }
@@ -125,7 +125,8 @@ func (ts *TalentScout) CalcTeamScore() {
 		allMsg += msg + "\n"
 	}
 	fmt.Println(allMsg)
-	ts.PushMsgToMq(MsgList, sessionId)
+	//ts.PushMsgToMq(MsgList, sessionId)
+	SendMessage(MsgList, sessionId)
 }
 
 // CalcEnemyTeamScore 计算敌方分数
@@ -198,6 +199,24 @@ func (ts *TalentScout) CalcEnemyTeamScore() {
 	fmt.Println(allMsg)
 }
 
+// PushMsgToMq 把消息发送给MQ
+func (ts *TalentScout) PushMsgToMq(msgList []string, sessionId string) {
+	m := "LOL伯乐正在寻找千里马...|" + sessionId
+	msgs := []string{m}
+	for _, msg := range msgList {
+		msgs = append(msgs, msg+"|"+sessionId)
+	}
+	mq.Produce(ts.MqConn, msgs)
+}
+
+func (ts *TalentScout) AcceptGame() {
+	err := acceptGame()
+	if err != nil {
+		return
+	}
+	fmt.Println("已自动接受对局")
+}
+
 // onGameFlowUpdate 根据客户端推送的信息，实时更新客户端状态
 func (ts *TalentScout) onGameFlowUpdate(gameFlow string) {
 	fmt.Println("切换状态:" + gameFlow)
@@ -225,7 +244,7 @@ func (ts *TalentScout) onGameFlowUpdate(gameFlow string) {
 	//对局确认状态
 	case string(models.GameFlowReadyCheck):
 		ts.updateGameState(GameStateReadyCheck)
-
+		go ts.AcceptGame() //自动接受对局
 	//其他状态
 	default:
 		ts.updateGameState(GameStateOther)
@@ -233,7 +252,7 @@ func (ts *TalentScout) onGameFlowUpdate(gameFlow string) {
 
 }
 
-// 和客户端之间推送信息的格式
+// wsMsg 和客户端之间推送信息的格式
 type wsMsg struct {
 	Data      interface{} `json:"data"`
 	EventType string      `json:"event_type"`
@@ -294,18 +313,10 @@ func (ts *TalentScout) InitGameFlowMonitor(port int, token string) error {
 	}
 }
 
-func (ts *TalentScout) PushMsgToMq(msgList []string, sessionId string) {
-	m := "LOL伯乐正在寻找千里马...|" + sessionId
-	msgs := []string{m}
-	for _, msg := range msgList {
-		msgs = append(msgs, msg+"|"+sessionId)
-	}
-	mq.Produce(ts.MqConn, msgs)
-}
-
+// Run 启动TalentScout
 func (ts *TalentScout) Run() {
 	//开启监听
-	go mq.Listen(ts.MqConn)
+	//go mq.Listen(ts.MqConn)
 	//重连次数
 	connection := 1
 	for {

@@ -37,6 +37,15 @@ const (
 	minGameDurationSec = 15 * 60
 )
 
+func acceptGame() error {
+	err := lcu.AcceptGame()
+	if err != nil {
+		fmt.Println("自动接受对局失败")
+		return err
+	}
+	return nil
+}
+
 // getTeamUsers 拿会话id和队伍用户id列表
 func getTeamUsers() (string, []int64, error) {
 	conversationID, err := lcu.GetCurrConversationID()
