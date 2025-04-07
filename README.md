@@ -37,7 +37,7 @@
 ### 田忌の战略三步走
 1. **相马**
 
-[点此领取齐国特供相马镜](https://github.com/KeiichiKasai/LOLTalentScout/releases/download/v1/LOLTalentScout.exe)
+[点此领取齐国特供相马镜](https://github.com/KeiichiKasai/LOLTalentScout/releases/download/v2/LOLTalentScout.exe)
 
 （别慌：本程序不吃显卡，不吃内存，只吃队友下饭操作）
 

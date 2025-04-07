@@ -104,7 +104,7 @@ func (ts *TalentScout) CalcTeamScore() {
 
 	var MsgList []string
 	allMsg := ""
-	// 发送到选人界面
+
 	for _, scoreInfo := range summonerScores {
 		//判断是什么马
 		horse := scores.Judge(scoreInfo.Score)
@@ -134,7 +134,7 @@ func (ts *TalentScout) CalcTeamScore() {
 		msg := fmt.Sprintf("%s\t[%s]-评分: %d 最近三场:%s", part[0], horse, int(scoreInfo.Score), currKDAMsg)
 		MsgList = append(MsgList, msg)
 		//发送到命令行的数据
-		allMsg += fmt.Sprintf("%s\t[%s]-评分: %d 最近七场:%s\n", part[0], horse, int(scoreInfo.Score), currKDAMsg)
+		allMsg += fmt.Sprintf("%s\t[%s]-评分: %d 最近七场:%s\n", part[0], horse, int(scoreInfo.Score), sevenKDAMsg)
 	}
 	fmt.Println(allMsg)
 	//ts.PushMsgToMq(MsgList, sessionId)
@@ -168,7 +168,7 @@ func (ts *TalentScout) CalcEnemyTeamScore() {
 	mu := sync.Mutex{}
 	summonerIDMapInfo, err := listSummoner(summonerIDList)
 	if err != nil {
-		fmt.Println("查询召唤师信息失败", zap.Error(err), zap.Any("summonerIDList", summonerIDList))
+		fmt.Println("查询敌方召唤师信息失败")
 		return
 	}
 	for _, summoner := range summonerIDMapInfo {
@@ -194,7 +194,7 @@ func (ts *TalentScout) CalcEnemyTeamScore() {
 	slices.SortFunc(summonerScores, func(a, b *scores.UserScore) int {
 		return cmp.Compare(b.Score, a.Score)
 	})
-	// 根据所有用户的分数判断小代上等马中等马下等马
+	// 根据所有用户的分数判断实力
 	allMsg := ""
 	for _, score := range summonerScores {
 		horse := scores.Judge(score.Score)
@@ -226,12 +226,12 @@ func (ts *TalentScout) AcceptGame() {
 	if err != nil {
 		return
 	}
-	fmt.Println("已自动接受对局")
+	fmt.Println("已自动接受对局,不允许临阵脱逃噢")
 }
 
 // onGameFlowUpdate 根据客户端推送的信息，实时更新客户端状态
 func (ts *TalentScout) onGameFlowUpdate(gameFlow string) {
-	fmt.Println("切换状态:" + gameFlow)
+	fmt.Println("当前状态:" + gameFlow)
 	switch gameFlow {
 
 	// 英雄选择状态
