@@ -65,7 +65,7 @@ type (
 		GameCreationDate      time.Time  `json:"gameCreationDate"`
 		GameDuration          int        `json:"gameDuration"` // 游戏持续时长 秒
 		GameId                int64      `json:"gameId"`
-		GameMode              GameType   `json:"gameMode"`
+		GameMode              GameMode   `json:"gameMode"`
 		GameType              GameType   `json:"gameType"`
 		GameVersion           string     `json:"gameVersion"`
 		MapId                 int        `json:"mapId"` // 地图id

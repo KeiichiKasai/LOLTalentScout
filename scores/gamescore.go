@@ -11,6 +11,7 @@ type (
 		SummonerName string   `json:"summonerName"`
 		Score        float64  `json:"scores"`
 		CurrKDA      [][3]int `json:"currKDA"`
+		IsARAM       bool     `json:"isARAM"`
 	}
 	IncScoreReason struct {
 		reason ScoreOption

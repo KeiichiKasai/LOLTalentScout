@@ -88,13 +88,17 @@ func getSummonerIDListFromConversationMsgList(msgList []models.ConversationMsg) 
 }
 
 // listGameHistory 根据用户puuid拿到历史战绩
-func listGameHistory(puuid string) ([]models.GameInfo, error) {
+func listGameHistory(puuid string) ([]models.GameInfo, bool, error) {
+	//查询最近20把
 	limit := 20
 	fmtList := make([]models.GameInfo, 0, limit)
+	//最近20把如果有10把是大乱斗，那么就称为大乱斗玩家，评分可能会有差异
+	countARAM := 0
+	isARAM := false
 	resp, err := lcu.ListGamesByPUUID(puuid, 0, limit)
 	if err != nil {
-		fmt.Println("查询用户战绩失败", zap.Error(err), zap.String("puuid", puuid))
-		return nil, err
+		fmt.Println("查询用户战绩失败:", puuid)
+		return nil, false, err
 	}
 	for _, gameItem := range resp.Games.Games {
 
@@ -103,6 +107,9 @@ func listGameHistory(puuid string) ([]models.GameInfo, error) {
 			gameItem.QueueId != models.ARAMQueueID &&
 			gameItem.QueueId != models.RankFlexQueueID {
 			continue
+		}
+		if gameItem.GameMode == models.GameModeARAM {
+			countARAM++
 		}
 		if gameItem.GameDuration < minGameDurationSec {
 			continue
@@ -114,20 +121,23 @@ func listGameHistory(puuid string) ([]models.GameInfo, error) {
 	for i := 0; i < gameCount/2; i++ {
 		fmtList[i], fmtList[gameCount-1-i] = fmtList[gameCount-1-i], fmtList[i]
 	}
-	return fmtList, nil
+	if countARAM >= 10 {
+		isARAM = true
+	}
+	return fmtList, isARAM, nil
 }
 
 // GetUserScore 从个人信息得到用户最近评分
 func GetUserScore(summoner *models.Summoner) (*scores.UserScore, error) {
-
+	// 获取最近20场战绩列表
+	gameList, isARAM, err := listGameHistory(summoner.Puuid)
 	summonerID := summoner.SummonerId
 	userScoreInfo := &scores.UserScore{
-		SummonerID: summonerID,
-		Score:      defaultScore,
+		SummonerID:   summonerID,
+		SummonerName: summoner.GameName,
+		Score:        defaultScore,
+		IsARAM:       isARAM,
 	}
-	userScoreInfo.SummonerName = fmt.Sprintf("%s#%s", summoner.GameName, summoner.TagLine)
-	// 获取最近20场战绩列表
-	gameList, err := listGameHistory(summoner.Puuid)
 	if err != nil {
 		fmt.Println("获取用户战绩失败", zap.Error(err), zap.Int64("id", summonerID))
 		return userScoreInfo, nil
@@ -199,7 +209,7 @@ func GetUserScore(summoner *models.Summoner) (*scores.UserScore, error) {
 		}
 		totalGameCount++
 		totalScore += gameScore.Value()
-		// log.Printf("game: %d,得分: %.2f\n", gameSummary.GameId, gameScore)
+
 	}
 
 	totalGameScore := 0.0      //总得分

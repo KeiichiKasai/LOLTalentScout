@@ -16,6 +16,7 @@ import (
 	"main.go/lcu/models"
 	"main.go/mq"
 	"main.go/scores"
+	"main.go/utils"
 	"net/http"
 	"slices"
 	"strings"
@@ -78,7 +79,7 @@ func (ts *TalentScout) CalcTeamScore() {
 	mu := sync.Mutex{}
 	summonerIDMapInfo, err := listSummoner(summonerIDList)
 	if err != nil {
-		fmt.Println("查询召唤师信息失败", zap.Error(err), zap.Any("summonerIDList", summonerIDList))
+		fmt.Println("查询召唤师信息失败")
 		return
 	}
 	for _, summoner := range summonerIDMapInfo {
@@ -87,7 +88,7 @@ func (ts *TalentScout) CalcTeamScore() {
 		g.Go(func() error {
 			actScore, err := GetUserScore(summoner) //直接拿到评分
 			if err != nil {
-				fmt.Println("计算用户得分失败", zap.Error(err), zap.Int64("summonerID", summonerID))
+				fmt.Println("计算用户", summonerID, "得分失败")
 				return nil
 			}
 			mu.Lock()
@@ -108,15 +109,26 @@ func (ts *TalentScout) CalcTeamScore() {
 	for _, scoreInfo := range summonerScores {
 		//判断是什么马
 		horse := scores.Judge(scoreInfo.Score)
+		//限制名字长度
+		name := utils.TruncateString(scoreInfo.SummonerName, 5)
+		//大乱斗玩家实力不详，特殊处理
+		if scoreInfo.IsARAM {
+			msg := fmt.Sprintf("%s\t[%s]-评分: %d 【大乱斗玩家,实力不详,遇弱则强,遇强则弱】", name, horse, int(scoreInfo.Score))
+			MsgList = append(MsgList, msg)
+			allMsg += msg + "\n"
+			continue
+		}
+		//峡谷玩家则展示KDA
 		//记录最近五场KDA
 		currKDASb := strings.Builder{}
-		//记录最近七场KDA
 		sevenKDASb := strings.Builder{}
 		for i := 0; i < 7 && i < len(scoreInfo.CurrKDA); i++ {
+			//客户端只发送三局
 			if i < 3 {
 				currKDASb.WriteString(fmt.Sprintf("%d/%d/%d  ", scoreInfo.CurrKDA[i][0], scoreInfo.CurrKDA[i][1],
 					scoreInfo.CurrKDA[i][2]))
 			}
+			//命令行可以看到七局
 			sevenKDASb.WriteString(fmt.Sprintf("%d/%d/%d  ", scoreInfo.CurrKDA[i][0], scoreInfo.CurrKDA[i][1],
 				scoreInfo.CurrKDA[i][2]))
 		}
@@ -129,12 +141,12 @@ func (ts *TalentScout) CalcTeamScore() {
 		if len(sevenKDAMsg) > 0 {
 			sevenKDAMsg = sevenKDAMsg[:len(sevenKDAMsg)-1]
 		}
-		part := strings.Split(scoreInfo.SummonerName, "#")
+
 		//发送给客户端的数据
-		msg := fmt.Sprintf("%s\t[%s]-评分: %d 最近三场:%s", part[0], horse, int(scoreInfo.Score), currKDAMsg)
+		msg := fmt.Sprintf("%s\t[%s]-评分: %d 最近三场:%s", name, horse, int(scoreInfo.Score), currKDAMsg)
 		MsgList = append(MsgList, msg)
 		//发送到命令行的数据
-		allMsg += fmt.Sprintf("%s\t[%s]-评分: %d 最近七场:%s\n", part[0], horse, int(scoreInfo.Score), sevenKDAMsg)
+		allMsg += fmt.Sprintf("%s\t[%s]-评分: %d 最近七场:%s\n", name, horse, int(scoreInfo.Score), sevenKDAMsg)
 	}
 	fmt.Println(allMsg)
 	//ts.PushMsgToMq(MsgList, sessionId)
@@ -143,6 +155,7 @@ func (ts *TalentScout) CalcTeamScore() {
 
 // CalcEnemyTeamScore 计算敌方分数
 func (ts *TalentScout) CalcEnemyTeamScore() {
+	//游戏开始后拿到sessionID
 	session, err := lcu.QueryGameFlowSession()
 	if err != nil {
 		return
@@ -154,8 +167,8 @@ func (ts *TalentScout) CalcEnemyTeamScore() {
 		return
 	}
 	selfID := ts.currSummoner.SummonerId
-	selfTeamUsers, enemyTeamUsers := GetAllUsersFromSession(selfID, session)
-	_ = selfTeamUsers
+	//通过sessionID拿到所有人信息
+	_, enemyTeamUsers := GetAllUsersFromSession(selfID, session)
 	summonerIDList := enemyTeamUsers
 
 	fmt.Println("敌方队伍人员列表:", summonerIDList)
@@ -196,16 +209,22 @@ func (ts *TalentScout) CalcEnemyTeamScore() {
 	})
 	// 根据所有用户的分数判断实力
 	allMsg := ""
-	for _, score := range summonerScores {
-		horse := scores.Judge(score.Score)
+	for _, scoreInfo := range summonerScores {
+		name := utils.TruncateString(scoreInfo.SummonerName, 5)
+		horse := scores.Judge(scoreInfo.Score)
+		//大乱斗玩家特殊对待
+		if scoreInfo.IsARAM {
+			msg := fmt.Sprintf("%s\t[%s]-评分: %d 【大乱斗玩家,实力不详,遇弱则强,遇强则弱】", name, horse, int(scoreInfo.Score))
+			allMsg += msg + "\n"
+			continue
+		}
 		currKDASb := strings.Builder{}
-		for i := 0; i < 7 && i < len(score.CurrKDA); i++ {
-			currKDASb.WriteString(fmt.Sprintf("%d/%d/%d  ", score.CurrKDA[i][0], score.CurrKDA[i][1],
-				score.CurrKDA[i][2]))
+		for i := 0; i < 7 && i < len(scoreInfo.CurrKDA); i++ {
+			currKDASb.WriteString(fmt.Sprintf("%d/%d/%d  ", scoreInfo.CurrKDA[i][0], scoreInfo.CurrKDA[i][1],
+				scoreInfo.CurrKDA[i][2]))
 		}
 		currKDAMsg := currKDASb.String()
-		part := strings.Split(score.SummonerName, "#")
-		msg := fmt.Sprintf("%s\t[%s]-综合评分: %d 最近七场:%s", part[0], horse, int(score.Score), currKDAMsg)
+		msg := fmt.Sprintf("%s\t[%s]-综合评分: %d 最近七场:%s", name, horse, int(scoreInfo.Score), currKDAMsg)
 		allMsg += msg + "\n"
 	}
 	fmt.Println(allMsg)
