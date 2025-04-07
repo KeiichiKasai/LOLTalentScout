@@ -110,19 +110,31 @@ func (ts *TalentScout) CalcTeamScore() {
 		horse := scores.Judge(scoreInfo.Score)
 		//记录最近五场KDA
 		currKDASb := strings.Builder{}
-		for i := 0; i < 3 && i < len(scoreInfo.CurrKDA); i++ {
-			currKDASb.WriteString(fmt.Sprintf("%d/%d/%d  ", scoreInfo.CurrKDA[i][0], scoreInfo.CurrKDA[i][1],
+		//记录最近七场KDA
+		sevenKDASb := strings.Builder{}
+		for i := 0; i < 7 && i < len(scoreInfo.CurrKDA); i++ {
+			if i < 3 {
+				currKDASb.WriteString(fmt.Sprintf("%d/%d/%d  ", scoreInfo.CurrKDA[i][0], scoreInfo.CurrKDA[i][1],
+					scoreInfo.CurrKDA[i][2]))
+			}
+			sevenKDASb.WriteString(fmt.Sprintf("%d/%d/%d  ", scoreInfo.CurrKDA[i][0], scoreInfo.CurrKDA[i][1],
 				scoreInfo.CurrKDA[i][2]))
 		}
 		currKDAMsg := currKDASb.String()
+		sevenKDAMsg := sevenKDASb.String()
 
 		if len(currKDAMsg) > 0 {
 			currKDAMsg = currKDAMsg[:len(currKDAMsg)-1]
 		}
+		if len(sevenKDAMsg) > 0 {
+			sevenKDAMsg = sevenKDAMsg[:len(sevenKDAMsg)-1]
+		}
 		part := strings.Split(scoreInfo.SummonerName, "#")
+		//发送给客户端的数据
 		msg := fmt.Sprintf("%s\t[%s]-评分: %d 最近三场:%s", part[0], horse, int(scoreInfo.Score), currKDAMsg)
 		MsgList = append(MsgList, msg)
-		allMsg += msg + "\n"
+		//发送到命令行的数据
+		allMsg += fmt.Sprintf("%s\t[%s]-评分: %d 最近七场:%s\n", part[0], horse, int(scoreInfo.Score), currKDAMsg)
 	}
 	fmt.Println(allMsg)
 	//ts.PushMsgToMq(MsgList, sessionId)
@@ -187,13 +199,13 @@ func (ts *TalentScout) CalcEnemyTeamScore() {
 	for _, score := range summonerScores {
 		horse := scores.Judge(score.Score)
 		currKDASb := strings.Builder{}
-		for i := 0; i < 5 && i < len(score.CurrKDA); i++ {
+		for i := 0; i < 7 && i < len(score.CurrKDA); i++ {
 			currKDASb.WriteString(fmt.Sprintf("%d/%d/%d  ", score.CurrKDA[i][0], score.CurrKDA[i][1],
 				score.CurrKDA[i][2]))
 		}
 		currKDAMsg := currKDASb.String()
 		part := strings.Split(score.SummonerName, "#")
-		msg := fmt.Sprintf("%s\t[%s]-综合评分: %d 最近三场:%s", part[0], horse, int(score.Score), currKDAMsg)
+		msg := fmt.Sprintf("%s\t[%s]-综合评分: %d 最近七场:%s", part[0], horse, int(score.Score), currKDAMsg)
 		allMsg += msg + "\n"
 	}
 	fmt.Println(allMsg)
