@@ -7,10 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/avast/retry-go"
+	"github.com/getlantern/systray"
 	"github.com/gorilla/websocket"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"main.go/checkBox"
 	"main.go/initialize"
 	"main.go/lcu"
 	"main.go/lcu/models"
@@ -36,6 +38,7 @@ type TalentScout struct {
 	mu           *sync.Mutex
 	GameState    GameState
 	MqConn       *amqp.Connection
+	autoAccept   bool
 }
 
 func NewTalentScout() *TalentScout {
@@ -45,8 +48,16 @@ func NewTalentScout() *TalentScout {
 		cancel: cancel,
 		mu:     &sync.Mutex{},
 		//MqConn: mq.InitMQ(), 启用消息队列
+		autoAccept: true,
 	}
 	return ts
+}
+
+// updateAutoAccept 修改是否自动接受对局
+func (ts *TalentScout) updateAutoAccept(flag bool) {
+	ts.mu.Lock()
+	ts.autoAccept = flag
+	ts.mu.Unlock()
 }
 
 // updateGameState 更新客户端状态
@@ -240,12 +251,15 @@ func (ts *TalentScout) PushMsgToMq(msgList []string, sessionId string) {
 	mq.Produce(ts.MqConn, msgs)
 }
 
+// AcceptGame 自动接受对局
 func (ts *TalentScout) AcceptGame() {
-	err := acceptGame()
-	if err != nil {
-		return
+	if ts.autoAccept {
+		err := acceptGame()
+		if err != nil {
+			return
+		}
+		fmt.Println("已自动接受对局,不允许临阵脱逃噢")
 	}
-	fmt.Println("已自动接受对局,不允许临阵脱逃噢")
 }
 
 // onGameFlowUpdate 根据客户端推送的信息，实时更新客户端状态
@@ -348,6 +362,8 @@ func (ts *TalentScout) InitGameFlowMonitor(port int, token string) error {
 func (ts *TalentScout) Run() {
 	//开启监听
 	//go mq.Listen(ts.MqConn)
+	//开启通知栏设置中心
+	go systray.Run(checkBox.OnStart, checkBox.OnExit)
 	//重连次数
 	connection := 1
 	for {
