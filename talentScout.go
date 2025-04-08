@@ -113,7 +113,7 @@ func (ts *TalentScout) CalcTeamScore() {
 		name := utils.TruncateString(scoreInfo.SummonerName, 5)
 		//大乱斗玩家实力不详，特殊处理
 		if scoreInfo.IsARAM {
-			msg := fmt.Sprintf("%s\t[%s]-评分: %d 【大乱斗玩家,实力不详,遇弱则强,遇强则弱】", name, horse, int(scoreInfo.Score))
+			msg := fmt.Sprintf("%s\t[%s]-评分: %d 【大乱斗玩家,实力不详,遇弱则强,遇强则弱】——来自WeGame", name, horse, int(scoreInfo.Score))
 			MsgList = append(MsgList, msg)
 			allMsg += msg + "\n"
 			continue
@@ -143,10 +143,10 @@ func (ts *TalentScout) CalcTeamScore() {
 		}
 
 		//发送给客户端的数据
-		msg := fmt.Sprintf("%s\t[%s]-评分: %d 最近三场:%s", name, horse, int(scoreInfo.Score), currKDAMsg)
+		msg := fmt.Sprintf("%s\t[%s]-评分: %d 最近三场:%s ——来自WeGame", name, horse, int(scoreInfo.Score), currKDAMsg)
 		MsgList = append(MsgList, msg)
 		//发送到命令行的数据
-		allMsg += fmt.Sprintf("%s\t[%s]-评分: %d 最近七场:%s\n", name, horse, int(scoreInfo.Score), sevenKDAMsg)
+		allMsg += fmt.Sprintf("%s\t[%s]-评分: %d 最近七场:%s\n ", name, horse, int(scoreInfo.Score), sevenKDAMsg)
 	}
 	fmt.Println(allMsg)
 	//ts.PushMsgToMq(MsgList, sessionId)
